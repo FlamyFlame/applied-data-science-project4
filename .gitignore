@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+.venv/
+venv/
+
+# Data artifacts
+data/raw/*
+!data/raw/.gitkeep
+data/processed/*
+!data/processed/.gitkeep
+
+# Figures and generated outputs
+reports/*.aux
+reports/*.log
+reports/*.out
+reports/*.toc
+reports/*.pdf
+
+# OS files
+.DS_Store

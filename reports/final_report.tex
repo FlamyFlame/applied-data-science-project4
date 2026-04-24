@@ -1,0 +1,120 @@
+\documentclass[11pt]{article}
+
+\usepackage[margin=1in]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage{setspace}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{float}
+\usepackage{hyperref}
+\usepackage{amsmath}
+\usepackage{enumitem}
+\usepackage{caption}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    urlcolor=blue,
+    citecolor=blue
+}
+
+\title{Project 4 Final Report\\End-to-End Machine Learning on an Open E-Commerce Dataset}
+\author{
+    Team Member 1 \and
+    Team Member 2 \and
+    Team Member 3
+}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+\onehalfspacing
+
+\begin{abstract}
+This report presents an end-to-end machine learning study built on an open e-commerce dataset. The project is designed to mirror a practical data science workflow, beginning with data acquisition and cleaning, continuing through exploratory analysis and feature engineering, and ending with supervised model development, comparison, and selection. In addition to predictive modeling, the analysis incorporates unsupervised learning to better understand latent structure in the data and to support downstream modeling decisions. The goal of the project is not only to obtain strong predictive performance, but also to justify modeling choices, assess tradeoffs among alternative approaches, and communicate the results in a clear and reproducible way.
+\end{abstract}
+
+\section{Introduction}
+
+E-commerce platforms generate rich behavioral and transactional data that can support a wide range of business decisions, including customer targeting, operational planning, product strategy, and service quality monitoring. Because these systems capture interactions among customers, products, payments, logistics, and outcomes, they provide a useful setting for studying the full machine learning pipeline from raw data to actionable conclusions.
+
+In this project, we analyze an open e-commerce dataset to investigate a predictive question of practical interest. Our workflow emphasizes three ideas. First, real-world data rarely arrive in a form that is immediately ready for modeling, so data cleaning and preprocessing are essential parts of the analysis rather than minor preliminary steps. Second, exploratory analysis and unsupervised learning can reveal structure that would be difficult to detect from raw tables alone. Third, model selection should reflect not only predictive performance but also interpretability, robustness, and fit to the project context.
+
+To address these goals, we organize the report around the major stages of an end-to-end data science workflow. We begin by describing the data source and the preparation steps needed to transform the raw data into an analysis-ready form. We then use visualization and unsupervised learning to better understand the data and motivate feature engineering choices. Next, we train and compare multiple supervised learning models using appropriate validation procedures and evaluation metrics. Finally, we select a preferred model, interpret the results, and discuss the limitations and possible extensions of the analysis.
+
+\section{Project Motivation and Predictive Question}
+
+\textit{Placeholder: State the business or analytical motivation, define the target variable, and explain why the prediction task matters.}
+
+\section{Data Acquisition and Preparation}
+
+\textit{Placeholder: Describe the source dataset, licensing, download method, schema, and all cleaning decisions. Include missing-value handling, type conversion, duplicate handling, outlier rules, and any filtering.}
+
+\section{Exploratory Data Analysis}
+
+\textit{Placeholder: Summarize key distributions, relationships, anomalies, and initial business insights. Add figures and descriptive statistics here.}
+
+\section{Unsupervised Learning}
+
+\textit{Placeholder: Describe clustering, PCA, UMAP, or another unsupervised method used to reveal structure or support feature engineering.}
+
+\section{Feature Engineering and Preprocessing}
+
+\textit{Placeholder: Document feature construction, encoding, scaling, dimensionality reduction, train-validation-test design, and leakage prevention.}
+
+\section{Supervised Models}
+
+\subsection{Model 1}
+\textit{Placeholder: Describe the first supervised model family, tuning strategy, and evaluation results.}
+
+\subsection{Model 2}
+\textit{Placeholder: Describe the second supervised model family, tuning strategy, and evaluation results.}
+
+\subsection{Model 3}
+\textit{Placeholder: Describe the third supervised model family, tuning strategy, and evaluation results.}
+
+\section{Model Comparison and Final Selection}
+
+\textit{Placeholder: Compare models using performance, interpretability, robustness, and practical usefulness. Explain why the final model was chosen.}
+
+\section{Discussion}
+
+\textit{Placeholder: Interpret the main findings, discuss limitations, and outline possible future improvements.}
+
+\section{Reproducibility}
+
+\textit{Placeholder: Provide enough detail for another reader to reproduce the analysis, including software, package versions, folder structure, and execution steps.}
+
+\section{Team Contributions}
+
+\begin{itemize}[leftmargin=1.5em]
+    \item Team Member 1: \textit{Placeholder}
+    \item Team Member 2: \textit{Placeholder}
+    \item Team Member 3: \textit{Placeholder}
+\end{itemize}
+
+\section{Conclusion}
+
+\textit{Placeholder: Summarize the project question, key findings, and the final takeaway in a short closing section.}
+
+\begin{thebibliography}{9}
+
+\bibitem{dataset}
+\textit{Placeholder: Add the final dataset citation here.}
+
+\bibitem{method}
+\textit{Placeholder: Add methodological references here as needed.}
+
+\end{thebibliography}
+
+\appendix
+
+\section{Additional Tables and Figures}
+
+\textit{Placeholder: Move large tables, supplementary plots, or extended results here.}
+
+\end{document}
