@@ -1,14 +1,14 @@
 # Applied Data Science Project 4
 
-This repository is a starter scaffold for the Project 4 end-to-end machine learning workflow. The current direction is an open e-commerce dataset with a pipeline that includes data acquisition, cleaning, EDA, unsupervised learning, feature engineering, supervised modeling, model comparison, and reporting.
+This repository is a starter scaffold for the Project 4 end-to-end machine learning workflow. The project uses the Olist Brazilian e-commerce dataset and follows a pipeline that includes data acquisition, cleaning, EDA, unsupervised learning, feature engineering, supervised modeling, model comparison, and reporting.
 
 ## Suggested branch structure
 
 - `main`: shared scaffolding, report template, and project notes
 - `eda-unsupervised-learning`: data cleaning, EDA, clustering, dimensionality reduction
-- `supervised-1`: model family 1
-- `supervised-2`: model family 2
-- `supervised-3`: model family 3
+- `logistic-regression`: baseline linear classifier
+- `gradient-boosted-trees`: boosted tree model family
+- `feed-forward-neural-network`: tabular neural network model family
 
 ## Recommended folders
 
@@ -22,8 +22,8 @@ This repository is a starter scaffold for the Project 4 end-to-end machine learn
 
 ## Quick start
 
-1. Pick the final dataset.
-2. Save the raw files under `data/raw/`.
+1. Save the Olist raw files under `data/raw/`.
+2. Document the join keys and table relationships before modeling.
 3. Do initial cleaning and EDA on `eda-unsupervised-learning`.
 4. Keep each supervised model family on its own branch so experiments stay organized.
 5. Merge the strongest ideas back into `main` for the final report and presentation.

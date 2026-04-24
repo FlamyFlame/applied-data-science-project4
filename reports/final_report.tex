@@ -52,7 +52,11 @@ To address these goals, we organize the report around the major stages of an end
 
 \section{Data Acquisition and Preparation}
 
-\textit{Placeholder: Describe the source dataset, licensing, download method, schema, and all cleaning decisions. Include missing-value handling, type conversion, duplicate handling, outlier rules, and any filtering.}
+This project uses the Brazilian E-Commerce Public Dataset by Olist, an open multi-table dataset made available through Kaggle. The dataset contains information on customers, orders, order items, products, sellers, payments, geolocation, and customer reviews. Its relational structure makes it well suited for an end-to-end machine learning project because the raw data must be merged, cleaned, and transformed before analysis-ready features can be constructed.
+
+For this project, the raw tables will be downloaded from the public Olist release and stored in a reproducible folder structure. The preparation stage will focus on identifying primary and foreign-key relationships across tables, standardizing date and time fields, checking for duplicate records, and resolving missing or inconsistent values. Because the dataset combines transactional, geographic, logistical, and review information, special attention will be paid to join logic and leakage prevention so that only information available at prediction time is used in supervised models.
+
+\textit{Placeholder: Add the exact download date, licensing note, table list, row counts, and the final cleaning decisions after the pipeline is implemented. Include missing-value handling, type conversion, duplicate handling, outlier rules, and any filtering.}
 
 \section{Exploratory Data Analysis}
 
@@ -68,14 +72,14 @@ To address these goals, we organize the report around the major stages of an end
 
 \section{Supervised Models}
 
-\subsection{Model 1}
-\textit{Placeholder: Describe the first supervised model family, tuning strategy, and evaluation results.}
+\subsection{Logistic Regression}
+\textit{Placeholder: Describe the logistic regression model, regularization choices, tuning strategy, and evaluation results.}
 
-\subsection{Model 2}
-\textit{Placeholder: Describe the second supervised model family, tuning strategy, and evaluation results.}
+\subsection{Gradient-Boosted Trees}
+\textit{Placeholder: Describe the gradient-boosted tree model, implementation choice, tuning strategy, and evaluation results.}
 
-\subsection{Model 3}
-\textit{Placeholder: Describe the third supervised model family, tuning strategy, and evaluation results.}
+\subsection{Feed-Forward Neural Network}
+\textit{Placeholder: Describe the neural network architecture, training procedure, tuning strategy, and evaluation results.}
 
 \section{Model Comparison and Final Selection}
 
@@ -104,7 +108,7 @@ To address these goals, we organize the report around the major stages of an end
 \begin{thebibliography}{9}
 
 \bibitem{dataset}
-\textit{Placeholder: Add the final dataset citation here.}
+Olist. \textit{Brazilian E-Commerce Public Dataset}. Kaggle. \url{https://www.kaggle.com/datasets/olistbr/brazilian-ecommerce}
 
 \bibitem{method}
 \textit{Placeholder: Add methodological references here as needed.}

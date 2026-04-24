@@ -1,6 +1,6 @@
-# Open E-Commerce Dataset Options
+# Chosen Dataset and Model Plan
 
-## Recommended choice: Olist Brazilian E-Commerce Public Dataset
+## Final dataset: Olist Brazilian E-Commerce Public Dataset
 
 Link: [Kaggle - Brazilian E-Commerce Public Dataset by Olist](https://www.kaggle.com/datasets/olistbr/brazilian-ecommerce)
 
@@ -25,23 +25,6 @@ Good unsupervised angles for Olist:
 - Seller segmentation by fulfillment and review performance
 - PCA or UMAP on engineered behavioral features
 - Clustering product categories or regional purchasing patterns
-
-## Strong backup choice: UCI Online Retail II
-
-Link: [UCI - Online Retail II](https://archive.ics.uci.edu/dataset/502/online%2Bretail%2Bii)
-
-Why it is a good backup:
-
-- More than 1 million transactions over two years
-- UCI explicitly lists classification, regression, and clustering as suitable tasks
-- Includes missing values and cancellations, so cleaning is still meaningful
-- Excellent for customer segmentation, demand-style targets, and repeat-purchase style problems
-
-Tradeoff versus Olist:
-
-- Simpler schema and fewer business dimensions
-- Easier to start quickly
-- Slightly less rich for a compelling end-to-end story than Olist
 
 ## Recommended modeling trio
 
