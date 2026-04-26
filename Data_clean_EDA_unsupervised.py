@@ -15,7 +15,7 @@ from sklearn.preprocessing import StandardScaler
 # Data Acquisition & Preparation
 # ==========================================
 print("--- Step 1: Data Acquisition & Preparation ---")
-data_dir = 'archive'
+data_dir = 'processed'
 
 # Load relational datasets
 orders = pd.read_csv(os.path.join(data_dir, 'olist_orders_dataset.csv'))
@@ -173,5 +173,4 @@ output_file = os.path.join(data_dir, 'clean_df_final.csv')
 clean_df.to_csv(output_file, index=False)
 
 print(f"Final data saved to: {output_file}")
-
 
