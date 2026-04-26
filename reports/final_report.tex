@@ -77,8 +77,20 @@ For this project, the raw tables will be downloaded from the public Olist releas
 \textit{Placeholder: Describe the logistic regression model, regularization choices, tuning strategy, and evaluation results.}
 
 \subsection{Gradient-Boosted Trees}
-\textit{Placeholder: Describe the gradient-boosted tree model, implementation choice, tuning strategy, and evaluation results.}
 
+We implement a gradient-boosted tree model to capture nonlinear relationships and complex feature interactions in the dataset. Gradient boosting is an ensemble method that builds a sequence of decision trees, where each new tree is trained to correct the errors of the previous ones. This approach is particularly effective for structured tabular data and often achieves strong predictive performance.
+
+The model is implemented using the \texttt{GradientBoostingClassifier} from \texttt{scikit-learn}. Compared to linear models such as logistic regression, gradient-boosted trees are able to model nonlinear effects without requiring extensive manual feature transformations. In addition, the method is relatively robust to different feature scales and can naturally handle mixed types of input variables after preprocessing.
+
+We use a preprocessing pipeline that includes median imputation for numerical features and most-frequent imputation followed by one-hot encoding for categorical variables. The dataset is split into training and testing sets using an 80/20 split, with stratification applied to preserve class balance.
+
+To improve model performance, we perform a lightweight hyperparameter tuning procedure. Specifically, we experiment with different values of the number of estimators, learning rate, and maximum tree depth. Due to computational constraints, we adopt a reduced parameter grid and cross-validation with a small number of folds.
+
+The tuned model is evaluated on the test set using multiple metrics, including accuracy, precision, recall, F1 score, and ROC AUC. The results show that the gradient-boosted tree model achieves strong predictive performance across all metrics, with particularly good balance between precision and recall, as reflected in a high F1 score. The ROC curve further indicates strong discriminative ability.
+
+In addition, feature importance analysis reveals that several engineered features, including temporal, spatial, and behavioral variables, play a significant role in prediction. This confirms the value of the feature engineering pipeline and highlights the importance of combining multiple data sources in an end-to-end workflow.
+
+Overall, the gradient-boosted tree model provides a strong combination of predictive accuracy and flexibility, making it a competitive candidate in the final model comparison.
 \subsection{Feed-Forward Neural Network}
 \textit{Placeholder: Describe the neural network architecture, training procedure, tuning strategy, and evaluation results.}
 
