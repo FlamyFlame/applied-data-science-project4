@@ -29,3 +29,6 @@ project4_instructions.md
 # DNN reference doc and training artifacts
 docs/dnn_reference.md
 results/
+
+# Raw data files (tracked on main; ignored here to avoid re-committing)
+processed/*.csv

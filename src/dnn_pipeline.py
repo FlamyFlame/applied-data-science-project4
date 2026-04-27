@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-DNN pipeline: feature prep -> 80/20 split -> Optuna K=5 CV (50 trials) -> best model -> test eval.
+DNN pipeline: feature prep -> 80/20 split -> Optuna K=3 CV (20 trials) -> best model -> test eval.
 Target: review_score regression (1-5).
 """
 import os
@@ -22,10 +22,10 @@ warnings.filterwarnings('ignore')
 PROCESSED_DIR = 'processed'
 RESULTS_DIR   = 'results'
 SEED          = 42
-N_FOLDS       = 5
-N_TRIALS      = 50
-PATIENCE      = 15
-MAX_EPOCHS    = 150
+N_FOLDS       = 3     # 3-fold: each fold ~58K train rows; faster than 5-fold on CPU
+N_TRIALS      = 20    # Bayesian search is sample-efficient; 20 trials sufficient
+PATIENCE      = 10
+MAX_EPOCHS    = 100
 
 os.makedirs(RESULTS_DIR, exist_ok=True)
 torch.manual_seed(SEED)
@@ -131,7 +131,7 @@ def _make_objective(X_train, y_train):
         dropout    = trial.suggest_float('dropout', 0.0, 0.5)
         lr         = trial.suggest_float('lr', 1e-4, 1e-2, log=True)
         wd         = trial.suggest_float('weight_decay', 1e-5, 1e-2, log=True)
-        batch_size = trial.suggest_categorical('batch_size', [512, 1024, 2048])
+        batch_size = trial.suggest_categorical('batch_size', [1024, 2048, 4096])
         activation = trial.suggest_categorical('activation', ['relu', 'gelu', 'elu'])
 
         hidden_dims = [hidden_dim] * n_layers
@@ -169,7 +169,7 @@ def main():
     )
     print(f"  Train: {len(X_train)}  |  Test: {len(X_test)}")
 
-    print(f"\nOptuna search: {N_TRIALS} trials, K={N_FOLDS} folds each...")
+    print(f"\nOptuna search: {N_TRIALS} trials, K={N_FOLDS} folds each (~25 min on CPU)...")
     study = optuna.create_study(
         direction='minimize',
         pruner=MedianPruner(n_startup_trials=5, n_warmup_steps=2),
