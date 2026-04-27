@@ -1,6 +1,6 @@
 # Applied Data Science Project 4
 
-This repository is a starter scaffold for the Project 4 end-to-end machine learning workflow. The project uses the Olist Brazilian e-commerce dataset and follows a pipeline that includes data acquisition, cleaning, EDA, unsupervised learning, feature engineering, supervised modeling, model comparison, and reporting.
+This repository is a starter scaffold for the Project 4 end-to-end machine learning workflow. The project uses the [Olist Brazilian e-commerce dataset](https://www.kaggle.com/datasets/olistbr/brazilian-ecommerce) and follows a pipeline that includes data acquisition, cleaning, EDA, unsupervised learning, feature engineering, supervised modeling, model comparison, and reporting.
 
 ## Team
 
