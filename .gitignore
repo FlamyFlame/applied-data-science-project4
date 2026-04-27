@@ -20,3 +20,12 @@ reports/*.pdf
 
 # OS files
 .DS_Store
+
+# Project instruction sources/exports
+project_4.pdf
+project4.pdf
+project4_instructions.md
+
+# DNN reference doc and training artifacts
+docs/dnn_reference.md
+results/
