@@ -12,7 +12,7 @@ import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader, TensorDataset
 from sklearn.model_selection import train_test_split, KFold
-from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import StandardScaler, OneHotEncoder
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 import optuna
 from optuna.pruners import MedianPruner
@@ -43,24 +43,45 @@ _DROP = [
     'customer_zip_code_prefix', 'seller_zip_code_prefix',
     'customer_city', 'seller_city', 'order_status', 'is_bad_review',
 ]
-_CAT  = ['payment_type', 'seller_state', 'customer_state', 'product_category_name']
+_CAT   = ['payment_type', 'seller_state', 'customer_state', 'product_category_name']
 TARGET = 'review_score'
 
 
-def load_features():
+def _load_raw():
+    """Load clean_df_final, drop irrelevant columns. Returns (DataFrame, y)."""
     df = pd.read_csv(os.path.join(PROCESSED_DIR, 'clean_df_final.csv'))
     df['product_category_name'] = df['product_category_name'].fillna('unknown')
     df = df.drop(columns=[c for c in _DROP if c in df.columns])
-
     y  = df.pop(TARGET).values.astype(np.float32)
-    df = pd.get_dummies(df, columns=[c for c in _CAT if c in df.columns], drop_first=False)
-
-    bool_cols = df.select_dtypes(include='bool').columns
-    df[bool_cols] = df[bool_cols].astype(np.float32)
     df = df.apply(pd.to_numeric, errors='coerce')
-    df = df.fillna(df.median())
+    return df, y
 
-    return df.values.astype(np.float32), y, df.columns.tolist()
+
+def _fit_preprocessor(df_train):
+    """Fit OHE on categorical cols and compute medians on numeric cols from training data only."""
+    cat_cols = [c for c in _CAT if c in df_train.columns]
+    ohe = OneHotEncoder(handle_unknown='ignore', sparse_output=False)
+    ohe.fit(df_train[cat_cols].astype(str))
+    num_cols = [c for c in df_train.columns if c not in cat_cols]
+    medians  = df_train[num_cols].median()
+    return ohe, medians
+
+
+def _apply_preprocessor(df, ohe, medians):
+    """Transform a DataFrame to a fixed-width float32 numpy array."""
+    cat_cols = [c for c in _CAT if c in df.columns]
+    num_cols = [c for c in df.columns if c not in cat_cols]
+
+    num_part = df[num_cols].fillna(medians.reindex(num_cols))
+    bool_cols = num_part.select_dtypes(include='bool').columns
+    num_part = num_part.copy()
+    num_part[bool_cols] = num_part[bool_cols].astype(np.float32)
+
+    cat_part  = ohe.transform(df[cat_cols].astype(str)).astype(np.float32)
+    cat_names = list(ohe.get_feature_names_out(cat_cols))
+
+    X = np.concatenate([num_part.values.astype(np.float32), cat_part], axis=1)
+    return X, num_cols + cat_names
 
 
 # ── Model ─────────────────────────────────────────────────────────────────────
@@ -94,8 +115,8 @@ def _make_loaders(X_tr, y_tr, X_val, y_val, batch_size):
 
 def train_model(model, train_dl, val_dl, lr, weight_decay,
                 patience=PATIENCE, max_epochs=MAX_EPOCHS):
-    opt    = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=weight_decay)
-    sched  = torch.optim.lr_scheduler.CosineAnnealingLR(opt, T_max=max_epochs)
+    opt     = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=weight_decay)
+    sched   = torch.optim.lr_scheduler.CosineAnnealingLR(opt, T_max=max_epochs)
     loss_fn = nn.MSELoss()
     best_val, no_improve, best_state = float('inf'), 0, None
 
@@ -160,14 +181,19 @@ def _make_objective(X_train, y_train):
 # ── Main ──────────────────────────────────────────────────────────────────────
 
 def main():
-    print("Loading features...")
-    X, y, feature_names = load_features()
-    print(f"  Shape: {X.shape}  |  target: [{y.min():.0f}, {y.max():.0f}]")
+    print("Loading data...")
+    df, y = _load_raw()
+    print(f"  Rows: {len(df)}  |  target: [{y.min():.0f}, {y.max():.0f}]")
 
-    X_train, X_test, y_train, y_test = train_test_split(
-        X, y, test_size=0.2, random_state=SEED, stratify=y.astype(int)
+    df_train, df_test, y_train, y_test = train_test_split(
+        df, y, test_size=0.2, random_state=SEED, stratify=y.astype(int)
     )
-    print(f"  Train: {len(X_train)}  |  Test: {len(X_test)}")
+
+    print("Fitting preprocessor on training data...")
+    ohe, medians = _fit_preprocessor(df_train)
+    X_train, feature_names = _apply_preprocessor(df_train, ohe, medians)
+    X_test,  _             = _apply_preprocessor(df_test,  ohe, medians)
+    print(f"  Feature matrix: {X_train.shape}  |  Train: {len(X_train)}  |  Test: {len(X_test)}")
 
     print(f"\nOptuna search: {N_TRIALS} trials, K={N_FOLDS} folds each (~25 min on CPU)...")
     study = optuna.create_study(
@@ -182,9 +208,9 @@ def main():
     print(f"Best params  : {best_p}")
 
     print("\nRetraining on full train set...")
-    scaler = StandardScaler()
-    X_tr_s = scaler.fit_transform(X_train)
-    X_te_s = scaler.transform(X_test)
+    scaler  = StandardScaler()
+    X_tr_s  = scaler.fit_transform(X_train)
+    X_te_s  = scaler.transform(X_test)
 
     hidden_dims = [best_p['hidden_dim']] * best_p['n_layers']
     model = MLP(X_tr_s.shape[1], hidden_dims, best_p['dropout'], best_p['activation'])
@@ -204,7 +230,6 @@ def main():
     print(f"MAE  : {mae:.4f}")
     print(f"R²   : {r2:.4f}")
 
-    # Per-score breakdown
     print("\nPer-score breakdown (mean predicted | count):")
     for score in range(1, 6):
         mask = y_test == score
@@ -222,6 +247,9 @@ def main():
     torch.save(model.state_dict(), os.path.join(RESULTS_DIR, 'best_model.pt'))
     with open(os.path.join(RESULTS_DIR, 'scaler.pkl'), 'wb') as f:
         pickle.dump(scaler, f)
+    with open(os.path.join(RESULTS_DIR, 'ohe.pkl'), 'wb') as f:
+        pickle.dump(ohe, f)
+    medians.to_json(os.path.join(RESULTS_DIR, 'feature_medians.json'))
     np.save(os.path.join(RESULTS_DIR, 'feature_names.npy'), np.array(feature_names))
     print(f"\nArtifacts saved to {RESULTS_DIR}/")
 
