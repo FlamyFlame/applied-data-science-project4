@@ -104,9 +104,18 @@ Artifacts saved to `results/xgboost/`.
 python src/dnn_pipeline.py
 ```
 
-MLP regression on `review_score` with Optuna Bayesian hyperparameter search
-(20 trials, K=3 cross-validation). Best model: 4 layers × width 90, ReLU,
-dropout 0.32. Test RMSE = 1.216, R² = 0.184.  
+MLP **ordinal-regularized multi-class classification** of `review_score` (1–5 stars) with Optuna Bayesian
+hyperparameter search (20 trials, K=5 stratified cross-validation).
+
+Key design choices:
+- `seller_state` / `customer_state` → one-hot encoded (49 cols total)
+- `product_category_name` → 8-dim learned embedding (`nn.Embedding`)
+- Dense input: 71 features; total input to first hidden layer: 79
+- Output: 5 logits → `argmax + 1` → predicted star rating (1–5)
+- Loss: class-weighted cross-entropy + 0.5 × ordinal MSE on expected score
+- Class weights: inverse-frequency (`2★` receives about `6x` the weight of an average class; `5★` about `0.35x`)
+- Final retraining uses a 10% internal val split; test set never touches `train_model`
+
 Artifacts saved to `results/`.
 
 ---
@@ -120,7 +129,7 @@ python src/inference.py path/to/new_orders.csv --out predictions.csv
 ```
 
 Input must be a CSV in the same format as `processed/clean_df_final.csv`.  
-Output is a single-column CSV with `predicted_review_score` (clipped to [1, 5]).
+Output is a single-column CSV with `predicted_review_score` (integer 1–5).
 
 ---
 

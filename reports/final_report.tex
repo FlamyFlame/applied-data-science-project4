@@ -49,7 +49,35 @@ To address these goals, we organize the report around the major stages of an end
 
 \section{Project Motivation and Predictive Question}
 
-\textit{Placeholder: State the business or analytical motivation, define the target variable, and explain why the prediction task matters.}
+\paragraph{The prediction question.}
+Given everything observable about an order at the moment of dispatch---logistics characteristics, product attributes, payment details, and the geographic relationship between buyer and seller---can we predict the star rating that the buyer will later assign?
+Formally, the target is \texttt{review\_score}, an integer on the 1--5 scale collected after delivery.
+Because the target is ordered but discrete, the modeling task sits between pure regression and standard multi-class classification. Across the supervised models, we evaluate both continuous-score and class-based formulations; for the DNN specifically, we use an ordinal-regularized five-class classifier so the model can represent all star levels while still respecting their natural ordering.
+
+\paragraph{Why this question matters.}
+A seller or platform operator who can anticipate a bad review before it arrives has meaningful options: proactive customer communication, partial refunds, or expedited re-shipment.
+These interventions require predictions at dispatch time, so only pre-delivery features are permitted in the model.
+The problem is not merely academic---a reliable signal on expected review score would directly support the kind of operational tooling that platforms use to manage seller quality scores, SLA compliance, and customer lifetime value.
+
+\paragraph{Dataset characteristics and their implications.}
+The Olist dataset provides 108{,}911 fully-labeled orders across nine relational tables.
+Three characteristics of this dataset directly shape the modeling choices made in this project.
+
+First, the feature space is both wide and heterogeneous.
+After merging and feature engineering, the input representation has 71 dense features (22 numeric measurements plus 49 one-hot columns for seller and customer state) and an 8-dimensional learned embedding for product category, giving a 79-dimensional input to the first hidden layer. These features span continuous logistics measurements (delivery days, delay, freight-to-price ratio, buyer--seller distance), product metadata (weight, volume, category, photo count), and geographic state encodings.
+The diversity of feature types, and the expectation that their interactions---for instance, the joint effect of long distance and a high-delay seller---carry much of the predictive signal, motivates models that can learn nonlinear cross-feature dependencies rather than assuming additive effects.
+
+Second, the target is severely imbalanced: 57.5\% of orders receive a 5-star rating, with 1-star and 2-star reviews making up only 22\% of the sample collectively.
+This imbalance means that a model predicting the modal outcome would achieve high accuracy while providing no useful signal.
+The imbalance therefore places strong pressure on any classifier or regressor to collapse toward high ratings unless the loss function, evaluation metric, and validation design explicitly counteract that tendency.
+
+Third, the dataset is large enough---over 100{,}000 labeled examples---to support training and validating deep models with high-dimensional inputs without serious overfitting risk, provided appropriate regularization is used.
+
+\paragraph{Motivation for a neural-network approach.}
+Logistic regression and gradient-boosted tree models are also trained in this project (Sections 7.1 and 7.2) to provide interpretable baselines and to isolate the contribution of model capacity.
+The feed-forward neural network (Section 7.3) is motivated by the expectation that the 79-dimensional input space contains smooth nonlinear interactions that a linear boundary cannot capture and that a tree ensemble approximates only through many shallow splits.
+At the scale of 100{,}000 examples, gradient-based optimization is computationally tractable, and the ability to learn joint representations across heterogeneous feature groups---rather than treating each category encoding as an independent predictor---offers a plausible route to better generalization.
+The architecture and training details are described in Section 7.3.
 
 \section{Data Acquisition and Preparation}
 
@@ -81,23 +109,46 @@ For this project, the raw tables will be downloaded from the public Olist releas
 
 \subsection{Feed-Forward Neural Network}
 
-A feed-forward multilayer perceptron (MLP) was trained to regress \texttt{review\_score} (1--5) directly, preserving the full ordinal signal that a binary target would collapse. Unlike tree-based models, the MLP learns smooth, nonlinear interactions across the entire 145-dimensional feature space and benefits from gradient-based optimization at scale.
+A feed-forward multilayer perceptron (MLP) was trained as an \textit{ordinal-regularized multi-class classifier} over \texttt{review\_score} $\in \{1,2,3,4,5\}$. The target is not truly continuous: it is an ordered set of five discrete categories, and a regression formulation is drawn toward the modal class (5$\star$, 57.5\% of orders), compressing all predictions toward the mean. A classification head produces a full probability distribution over the five classes, giving the model structural freedom to assign high probability to extreme ratings when the evidence supports it.
+
+A note on terminology: this model uses a standard five-class softmax output rather than a true ordinal threshold architecture such as CORAL or CORN, which encode monotone cumulative probabilities by construction. Ordinal structure is instead enforced through the loss function, described below.
 
 \paragraph{Feature pipeline.}
-The feature matrix was constructed from \texttt{clean\_df\_final.csv} (108{,}911 rows). All identifier and timestamp columns were dropped. Four categorical columns---\texttt{payment\_type}, \texttt{seller\_state}, \texttt{customer\_state}, and \texttt{product\_category\_name}---were one-hot encoded (missing product categories mapped to an \texttt{unknown} level), yielding 145 input features. A fresh \texttt{StandardScaler}, fitted exclusively on each fold's training partition, was applied to all numeric columns before each training run, preventing any information from validation or test partitions from influencing feature normalization.
+The feature matrix was constructed from \texttt{clean\_df\_final.csv} (108{,}911 rows). All identifier, timestamp, and city/zip columns were dropped along with the derived column \texttt{is\_bad\_review}. The remaining columns were partitioned into three groups.
+\begin{itemize}[noitemsep]
+  \item \textbf{Numeric} (22 columns): price, freight, distances, delays, product dimensions, cluster indicators, and coordinates. Median imputation (fitted on the training partition) was applied to residual missing values; a fresh \texttt{StandardScaler}, also fitted on training data only, standardized these columns before each training run.
+  \item \textbf{One-hot encoded} (49 columns): \texttt{seller\_state} (22 levels) and \texttt{customer\_state} (27 levels).
+  \item \textbf{Embedding} (8 dimensions): \texttt{product\_category\_name} (74 categories, including an \texttt{unknown} level for unseen categories at inference) was mapped to a learned 8-dimensional embedding via \texttt{nn.Embedding}.
+\end{itemize}
+The 22 numeric and 49 OHE columns form a 71-dimensional dense vector; concatenating the 8-dimensional embedding gives a 79-dimensional input to the first hidden layer.
 
 \paragraph{Architecture.}
 Each candidate MLP follows the block structure
 \[
-\mathbf{x} \;\longrightarrow\; \bigl[\,\mathrm{Linear} \to \mathrm{BatchNorm} \to \mathrm{Act} \to \mathrm{Dropout}\,\bigr]^{L} \longrightarrow\; \mathrm{Linear}(1),
+\bigl[\mathbf{x}_{\mathrm{dense}},\;\mathrm{Emb}(c)\bigr]
+\;\longrightarrow\;
+\bigl[\,\mathrm{Linear} \to \mathrm{BatchNorm} \to \mathrm{Act} \to \mathrm{Dropout}\,\bigr]^{L}
+\;\longrightarrow\;
+\mathrm{Linear}(5),
 \]
-where $L$ is the number of hidden layers, each of uniform width $d$. Batch normalization is applied after every linear transformation to stabilize gradient flow; dropout provides regularization. The output layer produces an unbounded scalar with no final activation, consistent with a regression target.
+where $\mathbf{x}_{\mathrm{dense}} \in \mathbb{R}^{71}$, $\mathrm{Emb}(c) \in \mathbb{R}^{8}$, and $L$ hidden layers each have uniform width $d$. Batch normalization stabilizes gradient flow; dropout regularizes. The output layer produces five raw logits---one per star rating---with no final activation. At inference time, the predicted class is $\mathrm{argmax}(\mathrm{logits}) + 1 \in \{1,\dots,5\}$.
 
-\paragraph{Training.}
-Models were optimized with AdamW and a cosine annealing learning-rate schedule. Training minimized mean squared error (MSE). Early stopping monitored validation MSE with a patience of 10 epochs, restoring the best-weight checkpoint upon termination; the maximum epoch budget was 100.
+\paragraph{Loss function.}
+Training minimized a combined ordinal loss:
+\[
+\mathcal{L}
+= \underbrace{\mathrm{CE}_{\mathrm{w}}(\mathbf{p}, y)}_{\text{class-weighted CE}}
++ \;\lambda\;\underbrace{\Bigl(\sum_{k=1}^{5} k\,\hat{p}_k - y\Bigr)^{\!2}}_{\text{ordinal MSE}},
+\quad \lambda = 0.5,
+\]
+where $\hat{p}_k = \mathrm{softmax}(\mathrm{logits})_k$ and $y \in \{1,\dots,5\}$ is the true score.
+
+The cross-entropy term uses inverse-frequency class weights to counteract the severe imbalance: $w_k = N / (5 \cdot n_k)$, yielding $w_2 \approx 5.96$ for the rarest class and $w_5 \approx 0.35$ for the most common. The ordinal MSE term penalizes mispredictions proportionally to their distance from the true class in expectation, so predicting 5$\star$ for a 1$\star$ order incurs a larger penalty than predicting 2$\star$. The two terms address orthogonal problems: class weights correct imbalance; the ordinal term encodes the ordering structure.
+
+Early stopping monitored the held-out validation combined loss (the same CE + ordinal MSE objective used during training) with a patience of 10 epochs, restoring the best-weight checkpoint; maximum epoch budget was 100. Using the same metric for training and early stopping ensures that hyperparameter selection via Optuna is aligned with the ordinal objective rather than plain cross-entropy alone.
 
 \paragraph{Hyperparameter search.}
-Because the search space spans mixed continuous, log-scale, and categorical dimensions, Bayesian optimization via Optuna's Tree-structured Parzen Estimator (TPE) sampler was used in place of random or grid search. A MedianPruner discarded unpromising trials after two warm-up folds, reducing wasted computation. Each trial was evaluated on 3-fold cross-validation; the objective was mean fold RMSE. Twenty trials were run in approximately 43 minutes on CPU. The search space is summarized in Table~\ref{tab:dnn_search}.
+Bayesian optimization via Optuna's TPE sampler was used. A MedianPruner discarded unpromising trials after two warm-up folds. Each trial was evaluated on 5-fold \texttt{StratifiedKFold} cross-validation (each fold preserving the 1$\star$--5$\star$ class distribution); the objective was mean fold validation combined loss. To prevent leakage, all preprocessing was fold-local: one-hot encoding, median imputation, the product-category embedding vocabulary, and the feature scaler were all fitted on the fold's training partition only. Product categories appearing only in a validation fold received the reserved \texttt{unknown} embedding, so no validation-row information influenced any preprocessing step. Twenty trials were run on CPU. The search space is summarized in Table~\ref{tab:dnn_search}.
 
 \begin{table}[H]
 \centering
@@ -118,47 +169,38 @@ Activation function            & Categorical      & \{ReLU, GELU, ELU\} \\
 \end{tabular}
 \end{table}
 
-\paragraph{Best architecture.}
-Trial 16 achieved the lowest mean 3-fold CV RMSE of 1.2189. The selected configuration is 4 hidden layers of width 90, ReLU activation, dropout rate 0.32, learning rate $9.3 \times 10^{-3}$, weight decay $1.5 \times 10^{-4}$, and batch size 2048. This model was retrained from scratch on the full 80\% training set and evaluated exactly once on the held-out 20\% test set.
+\paragraph{Final training and evaluation.}
+The best trial's configuration was retrained from scratch on a stratified 90\% subset of the 80\% training partition, with the remaining 10\% used as an internal early-stopping validation set. The locked 20\% test set was used only for the single final evaluation. Metrics reported are overall accuracy, mean absolute error on predicted class (MAE, interpretable as average stars off), and quadratic weighted kappa (QWK), which penalizes distant misclassifications more heavily and is a standard evaluation metric for ordinal classification tasks.
 
 \paragraph{Results.}
-Test-set performance is reported in Table~\ref{tab:dnn_results}. The near-identical CV and test RMSE (1.219 vs.\ 1.216) confirms that the model generalizes without overfitting to the search procedure.
+Test-set performance is reported in Table~\ref{tab:dnn_results}. Per-class accuracy and the row-normalised confusion matrix are shown in Figure~\ref{fig:dnn_per_score}.
 
 \begin{table}[H]
 \centering
-\caption{DNN evaluation on the held-out test set (21{,}783 orders).}
+\caption{DNN ordinal classifier evaluation on the held-out test set (21{,}783 orders).}
 \label{tab:dnn_results}
 \begin{tabular}{lcc}
 \toprule
-Metric & CV search & Test \\
+Metric & CV (search) & Test \\
 \midrule
-RMSE   & 1.2189 & 1.2161 \\
-MAE    & ---    & 0.9472 \\
-$R^2$  & ---    & 0.184  \\
+Combined loss (CE + $\lambda$ ordinal MSE) & 2.4548 & --- \\
+Accuracy           & ---    & 57.98\% \\
+MAE (stars off)    & ---    & 0.825 \\
+QWK                & ---    & 0.338 \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-Table~\ref{tab:dnn_per_score} breaks down mean predicted score by true star rating. Predictions are monotonically ordered across all five buckets---confirming the model has learned the direction of every relevant signal---yet compressed into the range 3.42--4.21, far short of the scale extremes.
+The best trial (trial 17 of 20) used 3 hidden layers of width 226, ReLU activations, dropout 0.272, learning rate $1.65 \times 10^{-3}$, weight decay $7.0 \times 10^{-5}$, and batch size 2048.
 
-\begin{table}[H]
+Per-class accuracy on the test set reveals that the model concentrates most of its probability mass on the 5$\star$ class: accuracy is 92.6\% for true 5$\star$ orders but only 29.6\%, 9.8\%, 7.9\%, and 1.7\% for 1$\star$ through 4$\star$ respectively, with 5$\star$ as the modal prediction for every true class. Overall accuracy of 57.98\% matches the 5$\star$ base rate, and QWK of 0.338 (``fair'' agreement) reflects meaningful signal above chance but substantial room for improvement. Addressing the residual majority-class collapse---for instance via stronger class weights, a true ordinal threshold architecture, or oversampling of minority ratings---is an avenue for future work.
+
+\begin{figure}[H]
 \centering
-\caption{Mean DNN prediction by true review score (test set).}
-\label{tab:dnn_per_score}
-\begin{tabular}{ccc}
-\toprule
-True score & Mean predicted & $n$ \\
-\midrule
-1$\star$ & 3.42 & 2{,}480 \\
-2$\star$ & 3.74 &    731 \\
-3$\star$ & 3.98 & 1{,}833 \\
-4$\star$ & 4.14 & 4{,}199 \\
-5$\star$ & 4.21 & 12{,}540 \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-The $R^2$ of 0.18 indicates that logistics and product features explain roughly 18\% of review score variance. This is modest in an absolute sense but consistent with the task: customer satisfaction incorporates latent factors---product quality, price perception, individual expectations---that are absent from the feature set. The compression of predictions toward the mean is a direct consequence of severe class imbalance (57.5\% of test rows carry a 5-star rating), which biases the regression toward high-scoring outcomes. Despite this, the monotonic per-bucket ordering demonstrates genuine signal extraction: orders with longer delays, greater buyer--seller distance, and worse recent seller performance are systematically predicted lower than orders with favorable logistics profiles.
+\includegraphics[width=0.9\textwidth]{../figures/dnn_per_score.png}
+\caption{Left: per-class accuracy by true star rating. Right: row-normalised confusion matrix. Both from the held-out test set.}
+\label{fig:dnn_per_score}
+\end{figure}
 
 \section{Model Comparison and Final Selection}
 
