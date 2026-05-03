@@ -102,7 +102,32 @@ For this project, the raw tables will be downloaded from the public Olist releas
 \section{Supervised Models}
 
 \subsection{Logistic Regression}
-\textit{Placeholder: Describe the logistic regression model, regularization choices, tuning strategy, and evaluation results.}
+
+As a baseline model, we trained an L2-regularized logistic regression classifier to predict whether an order would receive a bad review (1--3 stars). Given the class imbalance in the target variable (approximately 15\% bad reviews versus 85\% good reviews), we applied \texttt{class\_weight=balanced} to re-weight the loss function in proportion to class frequencies.
+
+The model was trained on a stratified 80/20 train-test split and validated using 5-fold stratified cross-validation. In total, 135 features were used, comprising 13 standardized numeric features, 3 unsupervised cluster labels derived from the EDA stage, and one-hot encoded customer state, seller state, and product category variables.
+
+\paragraph{Performance.}
+
+The model achieved a ROC-AUC of 0.725 on the held-out test set. Cross-validation produced a mean AUC of 0.714 ($\pm$ 0.007), confirming that performance is stable across data splits and that the model does not overfit.
+
+Overall accuracy was 73.3\%, though this metric is less informative under class imbalance. The F1 score on the bad-review class was 0.391. Recall reached 0.58, meaning the model successfully identified the majority of actual bad reviews, while precision was 0.29, indicating a substantial number of false positives.
+
+This trade-off is expected given the balanced weighting strategy, which lowers the effective decision threshold for the minority class at the cost of increased false positives.
+
+\paragraph{Feature Importance.}
+
+Inspection of the model coefficients reveals that \texttt{delivery\_days} was the most influential predictor, with coefficient +0.683, approximately 1.7 times larger than any other feature. This indicates that total customer waiting time is more strongly associated with dissatisfaction than whether the order was technically late.
+
+The coefficient for \texttt{delay\_days} was comparatively modest at +0.065. The number of items in an order (\texttt{order\_item\_id}, coefficient = +0.413) was the second strongest positive predictor, likely reflecting increased fulfillment complexity.
+
+Several product categories, including \texttt{beleza\_saude} (-0.118) and \texttt{esporte\_lazer} (-0.102), showed negative coefficients, implying lower baseline bad-review rates in these segments.
+
+\paragraph{Limitations.}
+
+Despite its interpretability advantages, logistic regression is constrained to a linear decision boundary and cannot capture feature interactions. For example, it may miss the compounding risk of a heavy product shipped over a long distance by a recently underperforming seller.
+
+The relatively low precision (0.29) suggests that the classification problem contains meaningful non-linear structure, motivating more expressive models in the following sections.
 
 \subsection{Gradient-Boosted Trees}
 \textit{Placeholder: Describe the gradient-boosted tree model, implementation choice, tuning strategy, and evaluation results.}
