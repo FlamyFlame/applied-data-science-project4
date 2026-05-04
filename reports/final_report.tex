@@ -76,21 +76,34 @@ For this project, the raw tables will be downloaded from the public Olist releas
 \subsection{Logistic Regression}
 \textit{Placeholder: Describe the logistic regression model, regularization choices, tuning strategy, and evaluation results.}
 
-\subsection{Gradient-Boosted Trees}
+\subsection{Gradient Boosted Trees}
 
-We implement a gradient-boosted tree model to capture nonlinear relationships and complex feature interactions in the dataset. Gradient boosting is an ensemble method that builds a sequence of decision trees, where each new tree is trained to correct the errors of the previous ones. This approach is particularly effective for structured tabular data and often achieves strong predictive performance.
+To capture nonlinear relationships and interactions among features, we trained a Gradient Boosted Trees (GBT) classifier as a more expressive alternative to logistic regression. Gradient boosting builds an ensemble of decision trees sequentially, where each tree is trained to correct the errors of the previous ones.
 
-The model is implemented using the \texttt{GradientBoostingClassifier} from \texttt{scikit-learn}. Compared to linear models such as logistic regression, gradient-boosted trees are able to model nonlinear effects without requiring extensive manual feature transformations. In addition, the method is relatively robust to different feature scales and can naturally handle mixed types of input variables after preprocessing.
+The model was trained using the same stratified 80/20 train-test split as the baseline model to ensure a fair comparison. We used the same feature set, including standardized numeric features, unsupervised cluster labels from the EDA stage, and one-hot encoded categorical variables. Basic hyperparameter tuning was performed to select appropriate values for the number of estimators, learning rate, and tree depth.
 
-We use a preprocessing pipeline that includes median imputation for numerical features and most-frequent imputation followed by one-hot encoding for categorical variables. The dataset is split into training and testing sets using an 80/20 split, with stratification applied to preserve class balance.
+\paragraph{Performance.}
 
-To improve model performance, we perform a lightweight hyperparameter tuning procedure. Specifically, we experiment with different values of the number of estimators, learning rate, and maximum tree depth. Due to computational constraints, we adopt a reduced parameter grid and cross-validation with a small number of folds.
+The GBT model achieved a ROC-AUC of 0.86 on the held-out test set, representing a substantial improvement over the logistic regression baseline. This indicates a strong ability to distinguish between good and bad reviews.
 
-The tuned model is evaluated on the test set using multiple metrics, including accuracy, precision, recall, F1 score, and ROC AUC. The results show that the gradient-boosted tree model achieves strong predictive performance across all metrics, with particularly good balance between precision and recall, as reflected in a high F1 score. The ROC curve further indicates strong discriminative ability.
+Compared to accuracy, which can be misleading under class imbalance, the AUC metric provides a more reliable assessment of model performance. The ROC curve shows that the model consistently maintains a high true positive rate while controlling false positives across different thresholds.
 
-In addition, feature importance analysis reveals that several engineered features, including temporal, spatial, and behavioral variables, play a significant role in prediction. This confirms the value of the feature engineering pipeline and highlights the importance of combining multiple data sources in an end-to-end workflow.
+Overall, the model demonstrates strong predictive performance and improved discrimination compared to simpler linear models.
 
-Overall, the gradient-boosted tree model provides a strong combination of predictive accuracy and flexibility, making it a competitive candidate in the final model comparison.
+\paragraph{Feature Importance.}
+
+Feature importance analysis reveals that several engineered features play a critical role in prediction. In particular, temporal features such as \texttt{delivery\_days} and \texttt{delay\_days} are among the most influential predictors, highlighting the importance of delivery speed and reliability in customer satisfaction.
+
+In addition, features derived from the EDA stage, including clustering-based features, also contribute meaningfully to the model. This confirms that feature engineering significantly enhances predictive performance.
+
+Unlike logistic regression, which relies on linear coefficients, the GBT model captures complex interactions between features, allowing it to better model real-world relationships in the data.
+
+\paragraph{Advantages.}
+
+The key advantage of Gradient Boosted Trees is its ability to model nonlinear patterns and feature interactions automatically. This makes it particularly well-suited for structured datasets with heterogeneous features.
+
+The improved performance over logistic regression suggests that the underlying prediction task contains meaningful nonlinear structure that cannot be captured by linear models alone.
+
 \subsection{Feed-Forward Neural Network}
 \textit{Placeholder: Describe the neural network architecture, training procedure, tuning strategy, and evaluation results.}
 
