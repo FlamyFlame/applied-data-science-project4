@@ -50,7 +50,7 @@ for col in time_cols:
 df = df.dropna(subset=['order_delivered_customer_date'])
 df = df[df['order_delivered_customer_date'] >= df['order_purchase_timestamp']]
 
-# Define the Target Variable Early (1 = Bad Review, 0 = Good/Neutral)
+# Define Target Variable Early (1 = Bad Review, 0 = Good/Neutral)
 df['is_bad_review'] = (df['review_score'] <= 2).astype(int)
 
 print(f"Preparation Complete. Master dataset records: {df.shape[0]}")
@@ -83,28 +83,34 @@ df['seller_recent_delay_avg'].fillna(0, inplace=True)
 
 
 # ==========================================
-# Step 3: Advanced Preprocessing & Unsupervised Synergy
+# Step 3: Advanced Preprocessing & Clustering
 # ==========================================
 print("\n--- Step 3: Advanced Preprocessing & Clustering ---")
 
-# Advanced Imputation & Anomaly Detection (KNN & Isolation Forest)
+# Advanced Imputation (KNN)
 dim_cols = ['product_weight_g', 'product_length_cm', 'product_height_cm', 'product_width_cm', 'distance_km']
 knn_imputer = KNNImputer(n_neighbors=5)
 df[dim_cols] = knn_imputer.fit_transform(df[dim_cols])
 df['product_volume_cm3'] = df['product_length_cm'] * df['product_height_cm'] * df['product_width_cm']
 
-# Filter high-dimensional outliers to protect ML models
+# Anomaly Detection (Isolation Forest)
 iso_features = ['price', 'freight_value', 'product_volume_cm3', 'distance_km']
 iso_forest = IsolationForest(n_estimators=100, contamination=0.01, random_state=42)
-df['is_outlier'] = iso_forest.fit_predict(df[iso_features].fillna(0))
-clean_df = df[df['is_outlier'] == 1].drop(columns=['is_outlier'])
+# returns 1 for inliers, -1 for outliers
+df['iso_label'] = iso_forest.fit_predict(df[iso_features].fillna(0))
+df['anomaly_status'] = df['iso_label'].map({1: 'Normal', -1: 'Anomaly (Outlier)'})
+
+# Keep a copy of data with outliers just for the visualization below
+df_with_outliers = df.copy()
+
+# Clean dataset by dropping the 1% outliers
+clean_df = df[df['iso_label'] == 1].drop(columns=['iso_label', 'anomaly_status'])
 
 # Unsupervised Synergy: PCA-KMeans Logistics Profiling
 cluster_features = ['product_weight_g', 'product_volume_cm3', 'freight_ratio']
 cluster_log = np.log1p(clean_df[cluster_features])
 cluster_scaled = StandardScaler().fit_transform(cluster_log)
 
-# Denoise via PCA before clustering
 pca_cluster = PCA(n_components=2, random_state=42)
 cluster_pca_proj = pca_cluster.fit_transform(cluster_scaled)
 
@@ -113,11 +119,48 @@ clean_df['logistics_cluster'] = kmeans.fit_predict(cluster_pca_proj)
 
 
 # ==========================================
-#  Comprehensive Visualizations
+# Preprocessing Visualizations
 # ==========================================
-print("\n--- Generating Comprehensive Visualizations ---")
+print("\n--- Generating Preprocessing & Feature Engineering Visualizations ---")
 
-# Plot 1: Logistics Cluster Boundaries in PCA Space (Structural Discovery)
+# Pre-Viz 1: Isolation Forest Outliers (Why we drop 1% of data)
+plt.figure(figsize=(10, 6))
+sns.scatterplot(x='product_volume_cm3', y='freight_value', hue='anomaly_status',
+                data=df_with_outliers, palette={'Normal': '#3498db', 'Anomaly (Outlier)': '#e74c3c'},
+                alpha=0.6, s=15)
+plt.title('Isolation Forest: Detecting High-Dimensional Anomalies')
+plt.xlabel('Product Volume (cm³)')
+plt.ylabel('Freight Value (BRL)')
+plt.legend(title='Status')
+plt.show()
+
+# Pre-Viz 2: Feature Scaling Impact (Why we standardize)
+fig, axes = plt.subplots(1, 2, figsize=(14, 5))
+# Before Scaling
+sns.kdeplot(clean_df['distance_km'], ax=axes[0], color='coral', fill=True, label='Distance (km)')
+sns.kdeplot(clean_df['delivery_days'], ax=axes[0], color='teal', fill=True, label='Delivery Days')
+axes[0].set_title('Raw Features (Varying Scales)')
+axes[0].set_xlabel('Raw Values')
+axes[0].legend()
+
+# After Scaling (Simulation)
+temp_scaler = StandardScaler()
+scaled_demo = temp_scaler.fit_transform(clean_df[['distance_km', 'delivery_days']])
+sns.kdeplot(scaled_demo[:, 0], ax=axes[1], color='coral', fill=True, label='Scaled Distance')
+sns.kdeplot(scaled_demo[:, 1], ax=axes[1], color='teal', fill=True, label='Scaled Delivery Days')
+axes[1].set_title('Standardized Features (Mean=0, Std=1)')
+axes[1].set_xlabel('Standard Score (Z)')
+axes[1].legend()
+plt.tight_layout()
+plt.show()
+
+
+# ==========================================
+# Target-Driven EDA Visualizations
+# ==========================================
+print("\n--- Generating Target-Driven EDA Visualizations ---")
+
+# Plot 1: Logistics Clusters in PCA Space
 plt.figure(figsize=(10, 6))
 plt.scatter(cluster_pca_proj[:, 0], cluster_pca_proj[:, 1], c=clean_df['logistics_cluster'], cmap='viridis', alpha=0.5, s=8)
 plt.title('Logistics Clusters in Principal Component Space')
@@ -126,24 +169,24 @@ plt.ylabel('PC2 (Cost/Efficiency Factor)')
 plt.colorbar(label='Logistics Cluster ID')
 plt.show()
 
-# Plot 2: Unsupervised Cluster Risk Profiling (Business Impact of Clusters)
+# Plot 2: Cluster Risk Profiling
 plt.figure(figsize=(10, 6))
 cluster_bad_rate = clean_df.groupby('logistics_cluster')['is_bad_review'].mean().reset_index()
 sns.barplot(x='logistics_cluster', y='is_bad_review', data=cluster_bad_rate, palette='magma')
-plt.title('Probability of Bad Review by Logistics Profile (PCA-KMeans Clusters)', fontsize=14)
+plt.title('Probability of Bad Review by Logistics Profile')
 plt.xlabel('Logistics Cluster ID')
 plt.ylabel('Bad Review Probability')
 plt.gca().yaxis.set_major_formatter(mtick.PercentFormatter(1.0))
 plt.show()
 
-# Plot 3: Global Correlation Matrix (Identifying primary drivers)
+# Plot 3: Correlation Matrix
 plt.figure(figsize=(10, 8))
 corr_cols = ['is_bad_review', 'delivery_days', 'delay_days', 'freight_ratio', 'distance_km', 'seller_recent_delay_avg']
 sns.heatmap(clean_df[corr_cols].corr(), annot=True, cmap='coolwarm', vmin=-1, vmax=1, fmt=".2f", linewidths=.5)
 plt.title('Correlation Matrix: Drivers of Customer Dissatisfaction', fontsize=15)
 plt.show()
 
-# Plot 4: Delivery Time vs. Exact Review Score (Temporal Impact)
+# Plot 4: Delivery Time vs. Exact Review Score
 plt.figure(figsize=(10, 6))
 plot_data = clean_df[(clean_df['delivery_days'] >= 0) & (clean_df['delivery_days'] <= 60)]
 sns.boxplot(x='review_score', y='delivery_days', data=plot_data, palette='RdYlGn')
@@ -152,7 +195,7 @@ plt.xlabel('Review Score (1 = Worst, 5 = Best)')
 plt.ylabel('Delivery Time (Days)')
 plt.show()
 
-# Plot 5: Freight Ratio Distribution (Financial Impact - The "Freight Assassin")
+# Plot 5: Freight Ratio Distribution (The "Freight Assassin")
 plt.figure(figsize=(10, 6))
 sns.violinplot(x='is_bad_review', y='freight_ratio', data=clean_df, palette='Set2', inner='quartile')
 plt.title('Freight Cost Ratio: Good vs. Bad Reviews', fontsize=14)
@@ -160,7 +203,7 @@ plt.xlabel('Review Type (0: Good/Neutral, 1: Bad Review)')
 plt.ylabel('Freight Ratio (Shipping / Total Cost)')
 plt.show()
 
-# Plot 6: Seller Reliability KDE (Validating the Rolling Window Feature)
+# Plot 6: Seller Reliability KDE
 plt.figure(figsize=(10, 6))
 sns.kdeplot(data=clean_df[clean_df['is_bad_review']==0], x='seller_recent_delay_avg', label='Good Reviews', fill=True, color='seagreen', common_norm=False)
 sns.kdeplot(data=clean_df[clean_df['is_bad_review']==1], x='seller_recent_delay_avg', label='Bad Reviews', fill=True, color='crimson', common_norm=False)
@@ -180,7 +223,7 @@ clean_df['logistics_cluster'] = clean_df['logistics_cluster'].astype(str)
 num_features = ['price', 'freight_value', 'distance_km', 'delivery_days', 'delay_days',
                 'freight_ratio', 'product_volume_cm3', 'seller_recent_delay_avg']
 
-# Final scaling to Standard Normal Distribution
+# Final scaling to Standard Normal Distribution for the entire clean dataset
 clean_df[num_features] = StandardScaler().fit_transform(clean_df[num_features])
 # One-Hot Encoding for Cluster IDs
 clean_df = pd.get_dummies(clean_df, columns=['logistics_cluster'], drop_first=True)
