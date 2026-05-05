@@ -149,7 +149,8 @@ Output is a single-column CSV with `predicted_review_score` (integer 1–5).
 │   ├── xgboost/
 │   └── (DNN artifacts at root level)
 ├── reports/
-│   └── final_report.tex
+│   ├── final_report.tex           # complete report (compile with pdflatex)
+│   └── Figure_[1-8].png           # EDA, clustering, and feature engineering figures
 ├── docs/                              # planning notes (not in git)
 ├── figures/
 └── notebooks/
@@ -173,5 +174,5 @@ Output is a single-column CSV with `predicted_review_score` (integer 1–5).
 
 - The project requires at least three distinct supervised models (LR, XGBoost, DNN).
 - `processed/` and `results/` are git-ignored; data files must be downloaded locally.
-- The final report is in `reports/final_report.tex`.
+- The final report is in `reports/final_report.tex`; compile with `pdflatex` (two passes for cross-references).
 - Each team member's contribution must be documented in the report.
