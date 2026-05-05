@@ -1,0 +1,15 @@
+
+Gradient Boosted Trees Model Summary
+
+Target variable:
+- low_rating = 1 if review_score <= 3, otherwise 0.
+
+Best model:
+- Tuned Gradient Boosted Trees
+
+Performance:
+- Accuracy: 0.9150
+- Precision: 1.0000
+- Recall: 0.6329
+- F1 Score: 0.7752
+- ROC AUC: 0.8606

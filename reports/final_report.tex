@@ -129,8 +129,33 @@ Despite its interpretability advantages, logistic regression is constrained to a
 
 The relatively low precision (0.29) suggests that the classification problem contains meaningful non-linear structure, motivating more expressive models in the following sections.
 
-\subsection{Gradient-Boosted Trees}
-\textit{Placeholder: Describe the gradient-boosted tree model, implementation choice, tuning strategy, and evaluation results.}
+\subsection{Gradient Boosted Trees}
+
+To capture nonlinear relationships and interactions among features, we trained a Gradient Boosted Trees (GBT) classifier as a more expressive alternative to logistic regression. Gradient boosting builds an ensemble of decision trees sequentially, where each tree is trained to correct the errors of the previous ones.
+
+The model was trained using the same stratified 80/20 train-test split as the baseline model to ensure a fair comparison. We used the same feature set, including standardized numeric features, unsupervised cluster labels from the EDA stage, and one-hot encoded categorical variables. Basic hyperparameter tuning was performed to select appropriate values for the number of estimators, learning rate, and tree depth.
+
+\paragraph{Performance.}
+
+The GBT model achieved a ROC-AUC of 0.86 on the held-out test set, representing a substantial improvement over the logistic regression baseline. This indicates a strong ability to distinguish between good and bad reviews.
+
+Compared to accuracy, which can be misleading under class imbalance, the AUC metric provides a more reliable assessment of model performance. The ROC curve shows that the model consistently maintains a high true positive rate while controlling false positives across different thresholds.
+
+Overall, the model demonstrates strong predictive performance and improved discrimination compared to simpler linear models.
+
+\paragraph{Feature Importance.}
+
+Feature importance analysis reveals that several engineered features play a critical role in prediction. In particular, temporal features such as \texttt{delivery\_days} and \texttt{delay\_days} are among the most influential predictors, highlighting the importance of delivery speed and reliability in customer satisfaction.
+
+In addition, features derived from the EDA stage, including clustering-based features, also contribute meaningfully to the model. This confirms that feature engineering significantly enhances predictive performance.
+
+Unlike logistic regression, which relies on linear coefficients, the GBT model captures complex interactions between features, allowing it to better model real-world relationships in the data.
+
+\paragraph{Advantages.}
+
+The key advantage of Gradient Boosted Trees is its ability to model nonlinear patterns and feature interactions automatically. This makes it particularly well-suited for structured datasets with heterogeneous features.
+
+The improved performance over logistic regression suggests that the underlying prediction task contains meaningful nonlinear structure that cannot be captured by linear models alone.
 
 \subsection{Feed-Forward Neural Network}
 
